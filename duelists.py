@@ -4,6 +4,7 @@ import math
 
 #Starting variable definitions
 pclass = {}
+#Make these dicts so it is easier to edit and change
 p1health = 100
 p2health = 100
 p1energy = 0
