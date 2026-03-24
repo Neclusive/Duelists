@@ -4,11 +4,8 @@ import math
 
 #Starting variable definitions
 pclass = {}
-#Make these dicts so it is easier to edit and change
-p1health = 100
-p2health = 100
-p1energy = 0
-p2energy = 0
+phealth = {'P1': 100, 'P2': 100}
+penergy = {'P1': 0, 'P2': 0}
 p1inv = []
 p2inv = []
 
@@ -18,11 +15,12 @@ equipment = {
 	'Smoke Bomb (Gives a 50% chance to dodge)': 6,
 	'Attack Up Potion (Raises attack power 20% for 3 turns)': 8, 
 	'Focus Amulet (Increases critical hit chance by 20% for the duration of the fight)': 12,
-	}
+}
+
 firestats = {
 	'Attack': 60, 
 	'Defense': 10, 
-	'Crit': 50, 
+	'Crit': 5, 
 	'Energy': 3, 
 	'Regen': 2
 }
@@ -30,7 +28,7 @@ firestats = {
 waterstats = {
 	'Attack': 40, 
 	'Defense': 30, 
-	'Crit': 40, 
+	'Crit': 4, 
 	'Energy': 4, 
 	'Regen': 1
 }
@@ -38,17 +36,19 @@ waterstats = {
 earthstats = {
 	'Attack': 50, 
 	'Defense': 20, 
-	'Crit': 20, 
+	'Crit': 2, 
 	'Energy': 6, 
 	'Regen': 1
 }
+
 def clr():
 	print('\033c', end='')
+
 def printc(text):
 	print(text.center(shutil.get_terminal_size().columns))
 
 def player_class_select(player):
-	global pclass, p1energy, p2energy
+	global pclass, penergy
 	temp_energy = 0
 	#Loop for selecting class
 	while True:
@@ -80,7 +80,7 @@ def player_class_select(player):
 				print(f"  {statname.ljust(10)}: {value}")
 			print('\nEARTH')
 			for statname, value in earthstats.items():
-				print(f"  {stat.ljust(10)}: {value}")
+				print(f"  {statname.ljust(10)}: {value}")
 			print('''
    
 HELP:
@@ -96,8 +96,7 @@ HELP:
 			clr()
 			print('INVALID SELECTION. TRY AGAIN.')
 	#sets energy levels after selection
-	if player == 'P1': p1energy = temp_energy
-	elif player == 'P2': p2energy = temp_energy
+	penergy[player] = temp_energy
 	clr()
 
 def player_items_select(player, gold=20):
@@ -130,33 +129,77 @@ def player_items_select(player, gold=20):
 		player_items_select(player, gold)
 	clr()
 
+def getstat(player, stat):
+	if pclass[player] == 'Fire':
+		return firestats[stat]
+	elif pclass[player] == 'Water':
+		return waterstats[stat]
+	elif pclass[player] == 'Earth':
+		return earthstats[stat]
+
 def duel_screen(player):
 	printc('======')
 	printc(f'  {player}  ')
 	printc('======')
-	print(f'P1 Health: {p1health}')
-	print(f'P1 Energy: {p1energy}')
-	print(f'P2 Health: {p2health}')
-	print(f'P1 Energy: {p2energy}')
+	print(f'P1 Health: {phealth["P1"]}')
+	print(f'P1 Energy: {penergy["P1"]}')
+	print(f'P2 Health: {phealth["P2"]}')
+	print(f'P2 Energy: {penergy["P2"]}')
 	
 	print('\n1. Attack (2 Energy)\n2. Use Item (1 Energy)\n3. End Turn')
 	selection = input('> ')
 	if selection == '1':
-		pass
+		attack(player)
 	elif selection == '2':
-		pass
+		use_item(player)
 	elif selection == '3':
 		pass
 	else:
 		clr()
 		print('INVALID SELECTION')
 		duel_screen(player)
-			
-	
+
+def attack(player):
+	penergy[player] -= 2
+	randomnum = random.randint(1, 10)
+	damage = getstat(player, 'Attack')
+	if randomnum <= getstat(player, 'Crit'):
+		damage * 1.2
+	damage -= getstat('P2' if player == 'P1' else 'P1', 'Defense')
+	phealth['P2' if player == 'P1' else 'P1'] -= damage
+	print(f'You dealt {damage} damage!')
+	input('Enter to continue')
+	clr()
+	duel_screen(player)
+
+
+def use_item(player):
+	if player == 'P1':
+		inv = p1inv
+	elif player == 'P2':
+		inv = p2inv
+	printc('INVENTORY')
+	for i, item in enumerate(inv, 1):
+		print(f'{i}. {item}')
+	print(f'{len(inv)+1}. Exit')
+	try:
+		selection = int(input('> ')) - 1
+		if selection == len(inv):
+			pass
+		else:
+			penergy[player] -= 1
+			print(f'You used {inv[selection]}!')
+			inv.pop(selection)
+	except:
+		clr()
+		print('INVALID SELECTION')
+		use_item(player)
+
 def duel_loop():
 	while True:
 		duel_screen('P1')
-	
+		duel_screen('P2')
+
 
 #Start of program
 clr()
