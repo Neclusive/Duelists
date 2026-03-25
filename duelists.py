@@ -7,7 +7,7 @@ import random
 #Starting variable definitions
 pclass = {}
 phealth = {'P1': 100, 'P2': 100}
-penergy = {'P1': 0, 'P2': 0}
+penergy = {'P1': 2, 'P2': 2}
 peffects = {
 	'P1': {'dodging': False, 'atk_boost': 0, 'def_boost': 0},
 	'P2': {'dodging': False, 'atk_boost': 0, 'def_boost': 0}
@@ -27,7 +27,7 @@ firestats = {
 	'Attack': 35, 
 	'Defense': 10, 
 	'Crit': 3, 
-	'Energy': 3, 
+	'Max Energy': 3, 
 	'Regen': 2
 }
 
@@ -35,15 +35,15 @@ earthstats = {
 	'Attack': 25, 
 	'Defense': 20, 
 	'Crit': 5, 
-	'Energy': 4, 
-	'Regen': 2
+	'Max Energy': 4, 
+	'Regen': 3
 }
 
 waterstats = {
 	'Attack': 30,
 	'Defense': 15, 
 	'Crit': 4, 
-	'Energy': 5, 
+	'Max Energy': 5, 
 	'Regen': 1
 }
 
@@ -52,6 +52,14 @@ def clr():
 
 def printc(text):
 	print(text.center(shutil.get_terminal_size().columns))
+
+def getstat(player, stat):
+	if pclass[player] == 'Fire':
+		return firestats[stat]
+	elif pclass[player] == 'Water':
+		return waterstats[stat]
+	elif pclass[player] == 'Earth':
+		return earthstats[stat]
 
 def player_class_select(player):
 	global pclass, penergy
@@ -64,15 +72,12 @@ def player_class_select(player):
 		selection = input('> ')
 		if selection == '1':
 			pclass[player] = 'Fire'
-			temp_energy = firestats['Energy']
 			break
 		elif selection == '2':
 			pclass[player] = 'Water'
-			temp_energy = waterstats['Energy']
 			break
 		elif selection == '3':
 			pclass[player] = 'Earth'
-			temp_energy = earthstats['Energy']
 			break
 		#help menu
 		elif selection == '4':
@@ -93,7 +98,7 @@ HELP:
   Attack: Amount of damage per attack.
   Defense: Ability to withstand attacks.
   Crit: Chance to deliver a critical hit.
-  Energy: Ability to attack (Costs 2 per attack)
+  Max Energy: Most amount of energy points you can have at once
   Regen: Number of energy points you get added at the beginning of each turn
 ''')
 			input('Enter to continue')
@@ -101,8 +106,6 @@ HELP:
 		else:
 			clr()
 			print('INVALID SELECTION. TRY AGAIN.')
-	#sets energy levels after selection
-	penergy[player] = temp_energy
 	clr()
 
 def player_items_select(player, gold=20):
@@ -134,14 +137,6 @@ def player_items_select(player, gold=20):
 			clr()
 			print('INVALID SELECTION')
 
-def getstat(player, stat):
-	if pclass[player] == 'Fire':
-		return firestats[stat]
-	elif pclass[player] == 'Water':
-		return waterstats[stat]
-	elif pclass[player] == 'Earth':
-		return earthstats[stat]
-
 def duel_screen(player):
 	while True:
 		printc('======')
@@ -152,7 +147,7 @@ def duel_screen(player):
 		print(f'P2 Health: {phealth["P2"]}')
 		print(f'P2 Energy: {penergy["P2"]}')
 		
-		print('\n1. Attack (2 Energy)\n2. Use Item (1 Energy)\n3. End Turn')
+		print('\n1. Attack (2 Energy)\n2. Use Item (1 Energy)\n3. Use Spell (1 Energy)\n4. End Turn')
 		selection = input('> ')
 		if selection == '1':
 			if penergy[player] >= 2:
@@ -163,11 +158,18 @@ def duel_screen(player):
 		elif selection == '2':
 			if penergy[player] >= 1:
 				clr()
-				item_menu(player)
+				use_item_menu(player)
 			else:
 				clr()
 				print('Not Enough Energy!')
 		elif selection == '3':
+			if penergy[player] >= 1:
+				clr()
+				use_spell_menu(player)
+			else:
+				clr()
+				print('Not Enough Energy!')
+		elif selection == '4':
 			clr()
 			break
 		else:
@@ -220,8 +222,7 @@ def attack(player):
 	input('Enter to continue: ')
 	clr()
 
-
-def item_menu(player):
+def use_item_menu(player):
 	global phealth, penergy, peffects
 	while True:
 		if player == 'P1':
@@ -249,7 +250,57 @@ def item_menu(player):
 				print(f"Healed 30HP!")
 
 			elif 'Energy Potion' in selected_item:
-				# Refill 50% of their MAX energy stat
+				penergy[player] = min(getstat(player, 'Energy'), penergy[player] + 3)
+				print(f"Gained 2 Energy!")
+
+			elif 'Smoke Bomb' in selected_item:
+				peffects[player]['dodging'] = True
+				print("You are shrouded in smoke! 50% dodge chance active.")
+
+			elif 'Attack Up' in selected_item:
+				peffects[player]['atk_boost'] = 3
+				print("Attack power increased for 3 turns!")
+
+			elif 'Focus Amulet' in inv[choice]:
+				print("This item is passive, it effect is already active.")
+				penergy[player] += 1
+				input('Press Enter to continue: ')
+				clr()
+				break
+
+			inv.pop(choice)
+			input('Press Enter to continue: ')
+			clr()
+			break
+
+		except (ValueError, IndexError):
+			clr()
+			print('INVALID SELECTION')
+
+def use_spell_menu:
+	global phealth, penergy, peffects
+	while True:
+		print('''
+SPELLS
+
+	1. Healing Spell (Restores 10 Health)
+	2. Defense Spell (Reduces damage of next attack by 20)
+	3. 
+'''
+		try:
+			choice = int(input('> ')) - 1
+			if choice == len(inv):
+				break
+
+			selected_item = inv[choice]
+			penergy[player] -= 1
+			
+			#Item Effects
+			if 'Healing Potion' in selected_item:
+				phealth[player] += 30
+				print(f"Healed 30HP!")
+
+			elif 'Energy Potion' in selected_item:
 				penergy[player] = min(getstat(player, 'Energy'), penergy[player] + 3)
 				print(f"Gained 2 Energy!")
 
