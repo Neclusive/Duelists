@@ -1,24 +1,12 @@
 import shutil
-import random
+from random import randint
 
 #Scott and Atticus helped balance the game and add new items. Thanks guys!
 
-
-#Starting variable definitions
-pclass = {}
-phealth = {'P1': 100, 'P2': 100}
-penergy = {'P1': 2, 'P2': 2}
-peffects = {
-	'P1': {'dodging': False, 'atk_boost': 0, 'def_boost': 0},
-	'P2': {'dodging': False, 'atk_boost': 0, 'def_boost': 0}
-}
-p1inv = []
-p2inv = []
-
 equipment = {
+	'Smoke Bomb (Gives a 50% chance to dodge)': 3,
 	'Healing Potion (Restores 30HP)': 5, 
-	'Smoke Bomb (Gives a 50% chance to dodge)': 6,
-	'Attack Up Potion (Raises attack power 20% for 3 turns)': 8, 
+	'Attack Up Potion (Raises attack power by 20 for 3 turns)': 8, 
 	'Defense potion (Increases defense by 10 for 3 turns)': 8,
 	'Focus Amulet (Increases critical hit chance by 20% for the duration of the fight)': 12,
 }
@@ -31,14 +19,6 @@ firestats = {
 	'Regen': 2
 }
 
-earthstats = {
-	'Attack': 25, 
-	'Defense': 20, 
-	'Crit': 5, 
-	'Max Energy': 4, 
-	'Regen': 3
-}
-
 waterstats = {
 	'Attack': 30,
 	'Defense': 15, 
@@ -47,38 +27,233 @@ waterstats = {
 	'Regen': 1
 }
 
+earthstats = {
+	'Attack': 25, 
+	'Defense': 20, 
+	'Crit': 5, 
+	'Max Energy': 4, 
+	'Regen': 3
+}
+
 def clr():
 	print('\033c', end='')
 
 def printc(text):
 	print(text.center(shutil.get_terminal_size().columns))
 
-def getstat(player, stat):
-	if pclass[player] == 'Fire':
-		return firestats[stat]
-	elif pclass[player] == 'Water':
-		return waterstats[stat]
-	elif pclass[player] == 'Earth':
-		return earthstats[stat]
+class Player:
+	def __init__(self, name, type):
+		self.name = name
+		if type == 'Fire':
+			self.stats = firestats.copy()
+		elif type == 'Earth':
+			self.stats = earthstats.copy()
+		elif type == 'Water':
+			self.stats = waterstats.copy()
+		self.inv = []
+		self.health = 100
+		self.energy = 2
+		self.effects = {
+			'atk_boost': {'amount': 0, 'time': 0},
+			'def_boost': {'amount': 0, 'time': 0},
+			'atk_nerf': {'amount': 0},
+			'def_nerf': {'amount': 0},
+			'dodging': {'chance': 0}
+		}
+	
+	def attack(self, opponent):
+		self.energy -= 2
 
-def player_class_select(player):
-	global pclass, penergy
-	temp_energy = 0
+		if randint(1, 10) <= opponent.effects['dodging']['chance']:
+			printc(f"--- {opponent.name} DODGED THE ATTACK! ---")
+			input('Enter to continue: ')
+			clr()
+			return
+
+		damage = self.stats['Attack']
+		crit_chance = self.stats['Crit']
+		defense = opponent.stats['Defense']
+
+		if self.effects['atk_boost']['time'] > 0:
+			damage += self.effects['atk_boost']['amount']
+
+		if self.effects['def_boost']['time'] > 0:
+			defense += self.effects['def_boost']['amount']
+		
+		if 'Focus Amulet (Increases critical hit chance by 20% for the duration of the fight)' in self.inv:
+			crit_chance += 2
+
+		if randint(1,10) <= crit_chance:
+			damage *= 1.5
+			print('CRITICAL HIT')
+		
+		damage -= defense
+		opponent.health -= damage
+
+	def shop(self):
+		gold = 20
+		while True:
+			printc('===============')
+			printc(self.name+' SHOP')
+			printc('===============')
+			print(f'\nGold: {str(gold)}\n')
+
+			#List items
+			for i, (name, cost) in enumerate(equipment.items(), 1):
+				print(f'{i}. [ ${str(cost)} ] {name}')
+			print(f'{len(equipment)+1}. Exit')
+			
+			try:
+				selection = int(input('> ')) - 1
+				if selection == len(equipment):
+					clr()
+					break
+				elif list(equipment.values())[selection] <= gold:
+					gold -= list(equipment.values())[selection]
+					self.inv.append(list(equipment.keys())[selection])
+					clr()
+				else: raise ValueError
+			except:
+				clr()
+				print('INVALID SELECTION')
+
+	def use_item_menu(self):
+		while True:
+			
+			printc(f'=== {self.name} INVENTORY ===')
+			
+			for i, item in enumerate(self.inv, 1):
+				print(f'{i}. {item}')
+			print(f'{len(self.inv)+1}. Exit')
+			
+			try:
+				choice = int(input('> ')) - 1
+				if choice == len(self.inv):
+					break
+
+				selected_item = self.inv[choice]
+				self.energy -= 1
+				
+				#Item Effects
+				if 'Healing Potion' in selected_item:
+					self.health += 30
+					print(f"Healed 30HP!")
+
+				elif 'Energy Potion' in selected_item:
+					self.energy = min(self.stats['Max Energy'], self.energy + 3)
+					print(f"Gained 2 Energy!")
+
+				elif 'Smoke Bomb' in selected_item:
+					self.effects['dodging'] = 5
+					print("You are shrouded in smoke! 50% dodge chance active.")
+
+				elif 'Attack Up' in selected_item:
+					self.effects['atk_boost']['time'] = 3
+					self.effects['atk_boost']['amount'] = 20
+					print("Attack power increased for 3 turns!")
+
+				elif 'Focus Amulet' in selected_item:
+					print("This item is passive, it effect is already active.")
+					self.energy += 1
+					input('Press Enter to continue: ')
+					clr()
+					break
+
+				self.inv.pop(choice)
+				input('Press Enter to continue: ')
+				clr()
+				break
+
+			except (ValueError, IndexError):
+				clr()
+				print('INVALID SELECTION')
+
+	def use_spell_menu(self):
+		while True:
+			printc(f'=== SPELLS ===')			
+			
+			print('1. Heal (+10 Health)\n2. Block (+5 Defense)\n3. Strengthen (+10 Attack)\n4. Exit')
+			selection = input('> ')
+			if selection == '1':
+				self.energy -= 1
+				self.health += 10
+			elif selection == '2':
+				self.energy -= 1
+				self.effects['def_boost']['amount'] = 5
+				self.effects['def_boost']['time'] = 1
+			elif selection == '3':
+				self.energy -= 1
+				self.effects['atk_boost']['amount'] = 10
+				self.effects['atk_boost']['time'] = 1
+			elif selection == '4':
+				clr()
+				break
+			else:
+				clr()
+				print('INVALID SELECTION')
+
+	def update_effects(self):
+			self.energy = min(self.stats['Max Energy'], self.energy + self.stats['Regen'])
+			
+			# Countdown effects
+			if self.effects['atk_boost']['time'] > 0:
+				self.effects['atk_boost']['time'] -= 1
+			if self.effects['def_boost']['time'] > 0:
+				self.effects['def_boost']['time'] -= 1
+			self.effects['dodging']['chance'] = 0 
+
+	def duel_screen(self, opponent):
+		while True:
+			printc('======')
+			printc(f'  {self.name}  ')
+			printc('======')
+			print(f'P1 Health: {p1.health}')
+			print(f'P1 Energy: {p1.energy}')
+			print(f'P2 Health: {p2.health}')
+			print(f'P2 Energy: {p2.energy}')
+			
+			print('\n1. Attack (2 Energy)\n2. Use Item (1 Energy)\n3. Use Spell (1 Energy)\n4. End Turn')
+			selection = input('> ')
+			if selection == '1':
+				if self.energy >= 2:
+					self.attack(opponent)
+				else:
+					clr()
+					print('Not Enough Energy!')
+			elif selection == '2':
+				if self.energy >= 1:
+					clr()
+					self.use_item_menu()
+				else:
+					clr()
+					print('Not Enough Energy!')
+			elif selection == '3':
+				if self.energy >= 1:
+					clr()
+					self.use_spell_menu()
+				else:
+					clr()
+					print('Not Enough Energy!')
+			elif selection == '4':
+				clr()
+				break
+			else:
+				clr()
+				print('INVALID SELECTION')
+
+def player_class_select(pname):
 	#Loop for selecting class
 	while True:
-		printc(player)
-		printc('Choose a class:')
+		printc(f'=== {pname} ===')
+		print('Choose a class:')
 		print('1. Fire\n2. Water\n3. Earth\n4. Tell me more')
 		selection = input('> ')
 		if selection == '1':
-			pclass[player] = 'Fire'
-			break
+			return Player(pname, 'Fire')
 		elif selection == '2':
-			pclass[player] = 'Water'
-			break
+			return Player(pname, 'Water')
 		elif selection == '3':
-			pclass[player] = 'Earth'
-			break
+			return Player(pname, 'Earth')
 		#help menu
 		elif selection == '4':
 		#prints stats from dictionaries
@@ -93,7 +268,6 @@ def player_class_select(player):
 			for statname, value in earthstats.items():
 				print(f"  {statname.ljust(10)}: {value}")
 			print('''
-   
 HELP:
   Attack: Amount of damage per attack.
   Defense: Ability to withstand attacks.
@@ -107,226 +281,6 @@ HELP:
 			clr()
 			print('INVALID SELECTION. TRY AGAIN.')
 	clr()
-
-def player_items_select(player, gold=20):
-	global p1inv, p2inv
-	while True:
-		printc('=========')
-		printc(player+' SHOP')
-		printc('=========')
-		print(f'\nGold: {str(gold)}\n')
-
-		for i, (name, cost) in enumerate(equipment.items(), 1):
-			print(f'{i}. [ ${str(cost)} ] {name}')
-		print(f'{len(equipment)+1}. Exit')
-		
-		try:
-			selection = int(input('> ')) - 1
-			if selection == len(equipment):
-				clr()
-				break
-			elif list(equipment.values())[selection] <= gold:
-				gold -= list(equipment.values())[selection]
-				if player == 'P1':
-					p1inv.append(list(equipment.keys())[selection])
-				elif player == 'P2':
-					p2inv.append(list(equipment.keys())[selection])
-				clr()
-			else: raise ValueError
-		except:
-			clr()
-			print('INVALID SELECTION')
-
-def duel_screen(player):
-	while True:
-		printc('======')
-		printc(f'  {player}  ')
-		printc('======')
-		print(f'P1 Health: {phealth["P1"]}')
-		print(f'P1 Energy: {penergy["P1"]}')
-		print(f'P2 Health: {phealth["P2"]}')
-		print(f'P2 Energy: {penergy["P2"]}')
-		
-		print('\n1. Attack (2 Energy)\n2. Use Item (1 Energy)\n3. Use Spell (1 Energy)\n4. End Turn')
-		selection = input('> ')
-		if selection == '1':
-			if penergy[player] >= 2:
-				attack(player)
-			else:
-				clr()
-				print('Not Enough Energy!')
-		elif selection == '2':
-			if penergy[player] >= 1:
-				clr()
-				use_item_menu(player)
-			else:
-				clr()
-				print('Not Enough Energy!')
-		elif selection == '3':
-			if penergy[player] >= 1:
-				clr()
-				use_spell_menu(player)
-			else:
-				clr()
-				print('Not Enough Energy!')
-		elif selection == '4':
-			clr()
-			break
-		else:
-			clr()
-			print('INVALID SELECTION')
-
-def attack(player):
-	global peffects, penergy
-	penergy[player] -= 2
-	
-	if player == 'P1':
-		inv = p1inv
-		opponent = 'P2'
-	elif player == 'P2':
-		inv = p2inv
-		opponent = 'P1'
-
-	if peffects[opponent]['dodging']:
-		peffects[opponent]['dodging'] = False
-		if random.randint(1, 2) == 1:
-			printc(f"--- {opponent} DODGED THE ATTACK! ---")
-			input('Enter to continue: ')
-			clr()
-			return
-	defense = getstat(opponent, 'Defense')
-	randomnum = random.randint(1, 15)
-	crit_chance = getstat(player, 'Crit')
-	damage = getstat(player, 'Attack')
-	if peffects[player]['atk_boost'] > 0:
-		damage *= 1.2
-		peffects[player]['atk_boost'] -= 1
-
-	if peffects[player]['def_boost'] > 0:
-		defense += 20
-		peffects[player]['def_boost'] -= 1
-	
-	if 'Focus Amulet (Increases critical hit chance by 20% for the duration of the fight)' in inv:
-		crit_chance += 2
-
-	if randomnum <= crit_chance:
-		damage *= 1.2
-		print('CRITICAL HIT')
-
-
-
-	damage = max(0, int(damage-defense))
-	phealth[opponent] -= damage
-	phealth[opponent] = max(0, phealth[opponent])
-	print(f'You dealt {damage} damage!')
-	input('Enter to continue: ')
-	clr()
-
-def use_item_menu(player):
-	global phealth, penergy, peffects
-	while True:
-		if player == 'P1':
-			inv = p1inv
-		elif player == 'P2':
-			inv = p2inv
-		
-		printc(f'{player} INVENTORY')
-		
-		for i, item in enumerate(inv, 1):
-			print(f'{i}. {item}')
-		print(f'{len(inv)+1}. Exit')
-		
-		try:
-			choice = int(input('> ')) - 1
-			if choice == len(inv):
-				break
-
-			selected_item = inv[choice]
-			penergy[player] -= 1
-			
-			#Item Effects
-			if 'Healing Potion' in selected_item:
-				phealth[player] += 30
-				print(f"Healed 30HP!")
-
-			elif 'Energy Potion' in selected_item:
-				penergy[player] = min(getstat(player, 'Energy'), penergy[player] + 3)
-				print(f"Gained 2 Energy!")
-
-			elif 'Smoke Bomb' in selected_item:
-				peffects[player]['dodging'] = True
-				print("You are shrouded in smoke! 50% dodge chance active.")
-
-			elif 'Attack Up' in selected_item:
-				peffects[player]['atk_boost'] = 3
-				print("Attack power increased for 3 turns!")
-
-			elif 'Focus Amulet' in inv[choice]:
-				print("This item is passive, it effect is already active.")
-				penergy[player] += 1
-				input('Press Enter to continue: ')
-				clr()
-				break
-
-			inv.pop(choice)
-			input('Press Enter to continue: ')
-			clr()
-			break
-
-		except (ValueError, IndexError):
-			clr()
-			print('INVALID SELECTION')
-
-def use_spell_menu:
-	global phealth, penergy, peffects
-	while True:
-		print('''
-SPELLS
-
-	1. Healing Spell (Restores 10 Health)
-	2. Defense Spell (Reduces damage of next attack by 20)
-	3. 
-'''
-		try:
-			choice = int(input('> ')) - 1
-			if choice == len(inv):
-				break
-
-			selected_item = inv[choice]
-			penergy[player] -= 1
-			
-			#Item Effects
-			if 'Healing Potion' in selected_item:
-				phealth[player] += 30
-				print(f"Healed 30HP!")
-
-			elif 'Energy Potion' in selected_item:
-				penergy[player] = min(getstat(player, 'Energy'), penergy[player] + 3)
-				print(f"Gained 2 Energy!")
-
-			elif 'Smoke Bomb' in selected_item:
-				peffects[player]['dodging'] = True
-				print("You are shrouded in smoke! 50% dodge chance active.")
-
-			elif 'Attack Up' in selected_item:
-				peffects[player]['atk_boost'] = 3
-				print("Attack power increased for 3 turns!")
-
-			elif 'Focus Amulet' in inv[choice]:
-				print("This item is passive, it effect is already active.")
-				penergy[player] += 1
-				input('Press Enter to continue: ')
-				clr()
-				break
-
-			inv.pop(choice)
-			input('Press Enter to continue: ')
-			clr()
-			break
-
-		except (ValueError, IndexError):
-			clr()
-			print('INVALID SELECTION')
 
 def announce_winner(winner):
 	clr()
@@ -343,21 +297,18 @@ printc(' ============ ')
 printc('Enter to start')
 input()
 clr()
-player_class_select('P1')
-player_class_select('P2')
-player_items_select('P1')
-player_items_select('P2')
+p1 = player_class_select('Player 1')
+p2 = player_class_select('Player 2')
+p1.shop()
+p2.shop()
 
 #Loop for players
 while True:
-	#Switches between 1&2
-	for player in ['P1', 'P2']:
-		#Regens energy
-		penergy[player] = min(penergy[player] + getstat(player, 'Regen'), getstat(player, 'Energy'))
-		duel_screen(player)
+	for current, opponent in [(p1, p2), (p2, p1)]:
+		current.update_effects()
+		current.duel_screen(opponent)
 
-		#Death check
-		if phealth['P1'] <= 0: 
-			announce_winner('P2')
-		elif phealth['P2'] <= 0:
-			announce_winner('P1')
+		if opponent.health <= 0: 
+			announce_winner(current.name)
+		if current.health <= 0:
+			announce_winner(opponent.name)
