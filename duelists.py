@@ -56,8 +56,6 @@ class Player:
 		self.effects = {
 			'atk_boost': {'amount': 0, 'time': 0},
 			'def_boost': {'amount': 0, 'time': 0},
-			'atk_nerf': {'amount': 0},
-			'def_nerf': {'amount': 0},
 			'dodging': {'chance': 0}
 		}
 	
@@ -200,7 +198,12 @@ class Player:
 				self.effects['atk_boost']['time'] -= 1
 			if self.effects['def_boost']['time'] > 0:
 				self.effects['def_boost']['time'] -= 1
-			self.effects['dodging']['chance'] = 0 
+			self.effects['dodging']['chance'] = 0
+
+   if self.effects['atk_boost']['time'] = 0:
+    self.effects['atk_boost']['amount'] = 0
+   if self.effects['def_boost']['time'] = 0:
+    self.effects['def_boost']['amount'] = 0
 
 	def duel_screen(self, opponent):
 		while True:
