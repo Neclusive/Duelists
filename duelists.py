@@ -50,7 +50,7 @@ class Player:
 			self.stats = waterstats.copy()
 		self.inv = []
 		self.health = 150
-		self.energy = 0
+		self.energy = 1
 		self.effects = {
 			'atk_boost': {'amount': 0, 'time': 0},
 			'def_boost': {'amount': 0, 'time': 0},
