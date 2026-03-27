@@ -7,7 +7,7 @@ equipment = {
 	'Smoke Bomb (Gives a 50% chance to dodge next attack)': 3,
 	'Healing Potion (Restores 30HP)': 5, 
 	'Attack Up Potion (Raises attack power by 20 for 3 turns)': 8, 
-	'Defense potion (Increases defense by 20 for 3 turns)': 8,
+	'Defense potion (Increases defense by 15 for 3 turns)': 8,
 	'Focus Amulet (Increases critical hit chance by 20% for the duration of the fight)': 12,
 }
 
@@ -21,14 +21,14 @@ firestats = {
 waterstats = {
 	'Attack': 35,
 	'Defense': 15, 
-	'Crit': 3,  
+	'Crit': 4,  
 	'Regen': 2
 }
 
 earthstats = {
 	'Attack': 30, 
 	'Defense': 20, 
-	'Crit': 4, 
+	'Crit': 3, 
 	'Regen': 3
 }
 
@@ -78,7 +78,7 @@ class Player:
 			damage += self.effects['atk_boost']['amount']
 
 		if opponent.effects['def_boost']['time'] > 0:
-			defense += self.effects['def_boost']['amount']
+			defense += opponent.effects['def_boost']['amount']
 		
 		if 'Focus Amulet (Increases critical hit chance by 20% for the duration of the fight)' in self.inv:
 			crit_chance += 2
@@ -89,7 +89,7 @@ class Player:
 			input('Enter to continue: ')
 			clr()
 		
-		damage -= defense
+		damage = max(damage-defense, 0)
 		printc (f'--- YOU DEALT {damage} DAMAGE! ---')
 		input('Enter to continue: ')
 		clr()
@@ -147,7 +147,7 @@ class Player:
 					print(f"Healed 30HP!")
 
 				elif 'Defense potion' in selected_item:
-					self.effects['def_boost']['amount'] = 20
+					self.effects['def_boost']['amount'] = 15
 					self.effects['def_boost']['time'] = 3
 					print("Defense increased for 3 turns!")
 
@@ -176,20 +176,25 @@ class Player:
 				input('Enter to continue: ')
 				clr()
 
-	def use_spell_menu(self):
+	def use_spell_menu(self, opponent):
 		while True:
 			printc(f'=== SPELLS ===')
 			print(f'Energy: {self.energy}\n')
 
 			print('1. Heal (+10 Health)\n2. Block (+10 Defense)\n3. Strengthen (+10 Attack)\n4. Hide (30% Dodge chance)\n5. Wind (Removes opponent\'s dodge chance)\n6. Exit')
 			selection = input('> ')
-			if self.energy >= 1:
-				continue
-			else:
+
+			if selection == '6':
 				clr()
-				print('Not Enough Energy!')
-				input('Enter to continue: ')
+				break
+
+			if self.energy < 1:
 				clr()
+				print('Not enough energy!')
+				input('Press Enter to continue: ')
+				clr()
+				break
+
 			if selection == '1':
 				self.energy -= 1
 				self.health += 10
@@ -222,9 +227,6 @@ class Player:
 				print('Opponent\'s dodge chance was removed!')
 				input('Press Enter to continue: ')
 				clr()
-			elif selection == '6':
-				clr()
-				break
 			else:
 				clr()
 				print('INVALID SELECTION')
@@ -243,10 +245,10 @@ class Player:
 	def get_effects_notes(self):
 		active = []
 		if self.effects['atk_boost']['time'] > 0:
-			active.append(f'Attack Boost: {self.effects['atk_boost']['amount']}')
+			active.append(f'Attack Boost: {self.effects["atk_boost"]["amount"]}')
 
 		if self.effects['def_boost']['time'] > 0:
-			active.append(f'Defense Boost: {self.effects['def_boost']['amount']}')
+			active.append(f'Defense Boost: {self.effects["def_boost"]["amount"]}')
 
 		if self.effects['dodging']['chance'] > 0:
 			active.append(f"Dodge Chance: {self.effects['dodging']['chance'] * 10}%")
@@ -291,7 +293,7 @@ class Player:
 			elif selection == '3':
 				if self.energy >= 1:
 					clr()
-					self.use_spell_menu()
+					self.use_spell_menu(opponent)
 				else:
 					clr()
 					print('Not Enough Energy!')
