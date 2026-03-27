@@ -151,10 +151,6 @@ class Player:
 					self.effects['def_boost']['time'] = 3
 					print("Defense increased for 3 turns!")
 
-				elif 'Energy Potion' in selected_item:
-					self.energy = min(self.stats['Max Energy'], self.energy + 3)
-					print(f"Gained 2 Energy!")
-
 				elif 'Smoke Bomb' in selected_item:
 					self.effects['dodging']['chance'] = 5
 					print("You are shrouded in smoke! 50% dodge chance active.")
